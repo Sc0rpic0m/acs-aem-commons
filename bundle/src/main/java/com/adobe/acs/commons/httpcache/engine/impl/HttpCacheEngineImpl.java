@@ -50,6 +50,7 @@ import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.commons.osgi.PropertiesUtil;
+import org.apache.sling.scripting.jsp.util.JspSlingHttpServletResponseWrapper;
 import org.osgi.framework.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -398,7 +399,14 @@ public class HttpCacheEngineImpl extends AnnotatedStandardMBean implements HttpC
 
         // Copy the cached data into the servlet output stream.
         try {
-            IOUtils.copy(cacheContent.getInputDataStream(), response.getOutputStream());
+            try{
+                IOUtils.copy(cacheContent.getInputDataStream(), response.getOutputStream());
+            }catch(IllegalStateException ex) {
+                //for JspResponseServletWrapper and other response wrappers that do not support outputstream.
+                //this will only work for text/html responses.
+                IOUtils.copy(cacheContent.getInputDataStream(), response.getWriter());
+            }
+
             if (log.isDebugEnabled()) {
                 log.debug("Response delivered from cache for the url [ {} ]", request.getRequestURI());
             }
