@@ -20,6 +20,7 @@
 package com.adobe.acs.commons.httpcache.store.jcr.impl;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Dictionary;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -32,6 +33,7 @@ import javax.management.openmbean.OpenDataException;
 import javax.management.openmbean.OpenType;
 import javax.management.openmbean.SimpleType;
 
+import com.adobe.acs.commons.httpcache.keys.CacheKeyWithCustomExpiry;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.felix.scr.annotations.Activate;
@@ -139,6 +141,13 @@ public class JCRHttpCacheStoreImpl extends AbstractJCRCacheMBean<CacheKey, Cache
 
     //defaults
     public static final String  DEFAULT_ROOTPATH            = "/var/acs-commons/httpcache";
+    private static final String SERVICE_NAME = "httpcache-jcr-storage-service";
+
+    private static final Map<String, Object> AUTH_INFO;
+
+    static {
+        AUTH_INFO = Collections.singletonMap(ResourceResolverFactory.SUBSERVICE, (Object) SERVICE_NAME);
+    }
 
     //By default, we go for the maximum bucket depth. This uses the full hashcode of 10 digits.
     public static final int     DEFAULT_BUCKETDEPTH         = 10;
@@ -147,7 +156,7 @@ public class JCRHttpCacheStoreImpl extends AbstractJCRCacheMBean<CacheKey, Cache
     public static final int     DEFAULT_SAVEDELTA           = 500;
 
     // 1 week.
-    public static final int     DEFAULT_EXPIRETIMEINSECONDS = 604800;
+    public static final int     DEFAULT_EXPIRETIMEINSECONDS = -1;
 
     private static final Logger log = LoggerFactory.getLogger(JCRHttpCacheStoreImpl.class);
 
@@ -192,7 +201,8 @@ public class JCRHttpCacheStoreImpl extends AbstractJCRCacheMBean<CacheKey, Cache
 
                     final Node entryNode = new BucketNodeHandler(bucketNode, dclm).createOrRetrieveEntryNode(key);
 
-                    new EntryNodeWriter(session, entryNode, key, content, expireTimeInSeconds).write();
+                    int customExpireTimeInSeconds = getExpireTimeInSeconds(key);
+                    new EntryNodeWriter(session, entryNode, key, content, customExpireTimeInSeconds).write();
                     session.save();
 
                     incrementLoadSuccessCount();
@@ -206,6 +216,25 @@ public class JCRHttpCacheStoreImpl extends AbstractJCRCacheMBean<CacheKey, Cache
                 }
             }
         );
+    }
+
+    /**
+     * Get the expire time for a cache key. Checks if there is a method that provides a custom expire time, otherwise uses default
+     * @param key
+     * @return
+     */
+    private int getExpireTimeInSeconds(CacheKey key) {
+
+        if(key instanceof CacheKeyWithCustomExpiry){
+            CacheKeyWithCustomExpiry keyWithExpiry = (CacheKeyWithCustomExpiry) key;
+            Integer customExpiry = keyWithExpiry.getCustomExpiry();
+
+            if(customExpiry != null){
+                return customExpiry;
+            }
+        }
+        return expireTimeInSeconds;
+
     }
 
     @Override
