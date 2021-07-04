@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 
 ### Added
 - #2585 - Added option in workflow-remover to define a millisecond delta for the workflows to be cleared.
+- #2619 - Added option in Request Synthesizer to pass extension / selectors
 
 ### Fixed
 - #2581 - Versioned ClientLibs no longer works with proxied clientlibs
